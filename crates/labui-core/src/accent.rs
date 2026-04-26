@@ -105,4 +105,26 @@ mod tests {
             got, y_derived, y_original
         );
     }
+
+    #[test]
+    fn dark_theme_apca_contract() {
+        let cfg = AccentConfig::from_hex("#007AFF");
+        let bg_dark = "#101012";
+        let got = resolve_accent_base(&cfg, true, false, bg_dark).unwrap();
+
+        let y_got = srgb_hex_to_y(&got).unwrap();
+        let y_bg = srgb_hex_to_y(bg_dark).unwrap();
+        let lc_got = apca_contrast(y_got, y_bg);
+
+        let y_canonical = srgb_hex_to_y("#007AFF").unwrap();
+        let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
+        let lc_canonical = apca_contrast(y_canonical, y_white);
+        let expected_target = -(lc_canonical.abs() * DARK_FACTOR);
+
+        assert!(
+            (lc_got - expected_target).abs() < 1.0,
+            "dark accent Lc {} should be close to target {} (within 1.0)",
+            lc_got, expected_target
+        );
+    }
 }

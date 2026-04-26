@@ -100,6 +100,9 @@ fn main() {
     let mut scss = String::new();
     let mut json_map: HashMap<String, String> = HashMap::new();
 
+    // ------------------------------------------------------------------
+    // 1. Generate neutral primitive blocks.
+    // ------------------------------------------------------------------
     for (name, scale_cfg) in &config.primitives {
         let params = labui_core::neutral::CurveParams {
             lightness_ease: scale_cfg.curve.lightness_ease,
@@ -139,7 +142,6 @@ fn main() {
             (None, None)
         };
 
-        // Build each selector exactly once.
         let mut emit_selector = |selector: &str, json_prefix: &str, scale: &[String]| {
             scss.push_str(&format!("{} {{\n", selector));
             for (i, hex) in scale.iter().enumerate() {
@@ -147,24 +149,33 @@ fn main() {
                 scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
                 json_map.insert(format!("{}{}", json_prefix, var), hex.to_lowercase());
             }
-            // Accent tokens inside the same block.
+            scss.push_str("}\n");
+        };
+
+        emit_selector(":root", "root-", &light);
+        emit_selector(".dark", "dark-", &dark);
+        if let Some(ref ic_l) = ic_light {
+            emit_selector(".ic", "ic-", ic_l);
+        }
+        if let Some(ref ic_d) = ic_dark {
+            emit_selector(".dark.ic", "dark-ic-", ic_d);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 2. Generate accent blocks (once per theme selector).
+    // ------------------------------------------------------------------
+    if !config.accents.is_empty() {
+        let themes: Vec<(&str, &str, &str, bool, bool)> = vec![
+            (":root", "root-", &bg_light, false, false),
+            (".dark", "dark-", &bg_dark, true, false),
+        ];
+
+        for (selector, json_prefix, bg, is_dark, is_ic) in &themes {
+            scss.push_str(&format!("{} {{\n", selector));
             for (accent_name, accent_hex) in &config.accents {
                 let cfg = labui_core::accent::AccentConfig::from_hex(accent_hex);
-                let (is_dark, is_ic) = match selector {
-                    ":root" => (false, false),
-                    ".dark" => (true, false),
-                    ".ic" => (false, true),
-                    ".dark.ic" => (true, true),
-                    _ => (false, false),
-                };
-                let bg = match selector {
-                    ":root" => &bg_light,
-                    ".dark" => &bg_dark,
-                    ".ic" => bg_ic_light.as_deref().unwrap_or(&bg_light),
-                    ".dark.ic" => bg_ic_dark.as_deref().unwrap_or(&bg_dark),
-                    _ => &bg_light,
-                };
-                match labui_core::accent::resolve_accent_base(&cfg, is_dark, is_ic, bg) {
+                match labui_core::accent::resolve_accent_base(&cfg, *is_dark, *is_ic, bg) {
                     Ok(hex) => {
                         let var = format!("--accent-{}", accent_name);
                         scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
@@ -177,15 +188,32 @@ fn main() {
                 }
             }
             scss.push_str("}\n");
-        };
-
-        emit_selector(":root", "root-", &light);
-        emit_selector(".dark", "dark-", &dark);
-        if let Some(ref ic_l) = ic_light {
-            emit_selector(".ic", "ic-", ic_l);
         }
-        if let Some(ref ic_d) = ic_dark {
-            emit_selector(".dark.ic", "dark-ic-", ic_d);
+
+        // IC themes (if IC neutral scales exist)
+        if let (Some(ic_light), Some(ic_dark)) = (&bg_ic_light, &bg_ic_dark) {
+            let ic_themes: Vec<(&str, &str, &str, bool, bool)> = vec![
+                (".ic", "ic-", ic_light, false, true),
+                (".dark.ic", "dark-ic-", ic_dark, true, true),
+            ];
+            for (selector, json_prefix, bg, is_dark, is_ic) in &ic_themes {
+                scss.push_str(&format!("{} {{\n", selector));
+                for (accent_name, accent_hex) in &config.accents {
+                    let cfg = labui_core::accent::AccentConfig::from_hex(accent_hex);
+                    match labui_core::accent::resolve_accent_base(&cfg, *is_dark, *is_ic, bg) {
+                        Ok(hex) => {
+                            let var = format!("--accent-{}", accent_name);
+                            scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
+                            json_map.insert(format!("{}{}", json_prefix, var), hex.to_lowercase());
+                        }
+                        Err(e) => {
+                            eprintln!("error resolving IC accent '{}': {}", accent_name, e);
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                scss.push_str("}\n");
+            }
         }
     }
 

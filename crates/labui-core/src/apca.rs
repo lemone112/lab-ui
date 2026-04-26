@@ -1,6 +1,6 @@
 use crate::color::ucs::Cam16Ucs;
 use crate::color::viewing_conditions::ViewingConditions;
-use crate::srgb::{srgb_from_hex, srgb_to_xyz, xyz_to_srgb};
+use crate::srgb::{srgb_from_hex, xyz_to_srgb};
 
 // ------------------------------------------------------------------
 // APCA constants (0.98G-4g)
@@ -138,6 +138,8 @@ fn is_in_gamut(ucs: &Cam16Ucs) -> bool {
 
 /// If `ucs` is outside the sRGB gamut, reduce chroma (`M'`) while
 /// preserving hue and lightness until it fits.
+///
+/// Uses binary search on `M'` for f64 precision.
 pub fn find_closest_in_gamut(ucs: Cam16Ucs) -> Cam16Ucs {
     if is_in_gamut(&ucs) {
         return ucs;
@@ -146,30 +148,28 @@ pub fn find_closest_in_gamut(ucs: Cam16Ucs) -> Cam16Ucs {
     let mp = (ucs.ap * ucs.ap + ucs.bp * ucs.bp).sqrt();
     let hr = ucs.bp.atan2(ucs.ap);
 
-    let mut current_mp = mp;
+    let mut lo = 0.0; // in-gamut (achromatic is always safe)
+    let mut hi = mp;  // out-of-gamut by definition here
+
     for _ in 0..60 {
-        current_mp *= 0.95;
+        let mid = (lo + hi) / 2.0;
         let candidate = Cam16Ucs {
             jp: ucs.jp,
-            ap: current_mp * hr.cos(),
-            bp: current_mp * hr.sin(),
+            ap: mid * hr.cos(),
+            bp: mid * hr.sin(),
         };
         if is_in_gamut(&candidate) {
-            return candidate;
-        }
-        if current_mp < 0.001 {
-            break;
+            lo = mid;
+        } else {
+            hi = mid;
         }
     }
 
-    // Hard fallback: clamp sRGB and round-trip.
-    let rgb = xyz_to_srgb(ucs.to_xyz(&ViewingConditions::srgb()));
-    let clamped = [
-        rgb[0].clamp(0.0, 1.0),
-        rgb[1].clamp(0.0, 1.0),
-        rgb[2].clamp(0.0, 1.0),
-    ];
-    Cam16Ucs::from_xyz(srgb_to_xyz(clamped), &ViewingConditions::srgb())
+    Cam16Ucs {
+        jp: ucs.jp,
+        ap: lo * hr.cos(),
+        bp: lo * hr.sin(),
+    }
 }
 
 #[cfg(test)]
