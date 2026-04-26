@@ -83,13 +83,20 @@ pub fn create_neutral_light_scale(
         let mp = c_dark + (c_base - c_dark) * env;
 
         // ----- h (hue) -----
+        // Achromatic anchors (M' ≈ 0) have undefined hue — atan2(0,0) returns 0,
+        // which produces spurious yellow-green intermediates.  Use base_hue instead.
+        let a0_chroma = (a0.ap * a0.ap + a0.bp * a0.bp).sqrt();
+        let start_hue = if a0_chroma < 1e-3 { base_hue } else { a0.bp.atan2(a0.ap) };
+
+        let a12_chroma = (a12.ap * a12.ap + a12.bp * a12.bp).sqrt();
+        let end_hue = if a12_chroma < 1e-3 { base_hue } else { a12.bp.atan2(a12.ap) };
+
         let hue = if i < 6 {
             let u = i as f64 / 6.0;
-            let start_hue = a0.bp.atan2(a0.ap);
             start_hue + (base_hue - start_hue) * ease_in(u, params.hue_ease)
         } else {
             let u = (i - 6) as f64 / 6.0;
-            base_hue + (a12.bp.atan2(a12.ap) - base_hue) * u
+            base_hue + (end_hue - base_hue) * u
         };
 
         out.push(
