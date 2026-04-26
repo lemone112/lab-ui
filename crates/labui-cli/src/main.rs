@@ -171,7 +171,7 @@ fn main() {
         scss.push_str(":root {\n");
         for (i, hex) in light.iter().enumerate() {
             let var = format!("--{}-{}", name, i);
-            scss.push_str(&format!("  {}: {};", var, hex.to_lowercase()));
+            scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
             json_map.insert(format!("root-{}", var), hex.to_lowercase());
         }
         scss.push_str("}\n");
@@ -179,7 +179,7 @@ fn main() {
         scss.push_str(".dark {\n");
         for (i, hex) in dark.iter().enumerate() {
             let var = format!("--{}-{}", name, i);
-            scss.push_str(&format!("  {}: {};", var, hex.to_lowercase()));
+            scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
             json_map.insert(format!("dark-{}", var), hex.to_lowercase());
         }
         scss.push_str("}\n");
@@ -188,7 +188,7 @@ fn main() {
             scss.push_str(".ic {\n");
             for (i, hex) in ic_l.iter().enumerate() {
                 let var = format!("--{}-{}", name, i);
-                scss.push_str(&format!("  {}: {};", var, hex.to_lowercase()));
+                scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
                 json_map.insert(format!("ic-{}", var), hex.to_lowercase());
             }
             scss.push_str("}\n");
@@ -198,7 +198,7 @@ fn main() {
             scss.push_str(".dark.ic {\n");
             for (i, hex) in ic_d.iter().enumerate() {
                 let var = format!("--{}-{}", name, i);
-                scss.push_str(&format!("  {}: {};", var, hex.to_lowercase()));
+                scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
                 json_map.insert(format!("dark-ic-{}", var), hex.to_lowercase());
             }
             scss.push_str("}\n");

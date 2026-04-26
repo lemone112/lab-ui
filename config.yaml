@@ -7,11 +7,13 @@ primitives:
       light: "#FFFFFF"
       base:  "#72727A"
       dark:  "#000000"
-    # Optional curve tuning.  Omit to use defaults.
-    # curve:
-    #   lightness_ease: 1.7
-    #   hue_ease: 0.6
-    #   chroma_peak: 0.35
+
+accents:
+  brand: "#007AFF"
+  red:   "#FF3B30"
+
+tint:
+  strengths: [2, 4, 8, 12, 20, 32, 52, 72]
 
 output:
   scss: "dist/tokens.scss"

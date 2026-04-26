@@ -20,6 +20,8 @@ mod tests {
                 });
                 m
             },
+            accents: Default::default(),
+            tint: Default::default(),
             output: crate::OutputConfig {
                 scss: "dist/tokens.scss".into(),
                 json: "dist/tokens.json".into(),
