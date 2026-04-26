@@ -13,12 +13,6 @@ primitives:
     #   hue_ease: 0.6
     #   chroma_peak: 0.35
 
-semantic:
-  bg-surface:       "neutral-0"
-  bg-surface-hover: "neutral-1"
-  text-primary:     "neutral-12"
-  text-secondary:   "neutral-8"
-
 output:
   scss: "dist/tokens.scss"
   json: "dist/tokens.json"

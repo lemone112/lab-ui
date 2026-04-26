@@ -14,14 +14,6 @@
       },
       "additionalProperties": false
     },
-    "semantic": {
-      "type": "object",
-      "description": "Named aliases into primitives",
-      "additionalProperties": {
-        "type": "string",
-        "pattern": "^[a-z]+-[0-9]+$"
-      }
-    },
     "output": {
       "type": "object",
       "properties": {

@@ -11,8 +11,6 @@ use serde::{Deserialize, Serialize};
 struct Config {
     primitives: HashMap<String, ScaleConfig>,
     #[serde(default)]
-    semantic: HashMap<String, String>,
-    #[serde(default)]
     output: OutputConfig,
 }
 
@@ -153,12 +151,6 @@ fn main() {
             }
             scss.push_str("}\n");
         }
-    }
-
-    for (semantic_name, primitive_ref) in &config.semantic {
-        let var_name = format!("--{}", semantic_name.replace('_', "-"));
-        let target = format!("--{}", primitive_ref);
-        scss.push_str(&format!("{} {{ {}: var({}); }}\n", ":root", var_name, target));
     }
 
     fs::create_dir_all(Path::new(&config.output.scss).parent().unwrap_or(Path::new(".")))

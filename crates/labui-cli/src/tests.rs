@@ -20,11 +20,6 @@ mod tests {
                 });
                 m
             },
-            semantic: {
-                let mut m = HashMap::new();
-                m.insert("bg-surface".into(), "neutral-0".into());
-                m
-            },
             output: crate::OutputConfig {
                 scss: "dist/tokens.scss".into(),
                 json: "dist/tokens.json".into(),
