@@ -21,7 +21,6 @@ mod tests {
                 m
             },
             accents: Default::default(),
-            tint: Default::default(),
             output: crate::OutputConfig {
                 scss: "dist/tokens.scss".into(),
                 json: "dist/tokens.json".into(),
@@ -40,5 +39,12 @@ mod tests {
         let yaml = "primitives:\n  neutral:\n    light: \"#FFFFFF\"\n    base: \"#787880\"\n    dark: \"#101012\"\noutput:\n  scss: \"dist/tokens.scss\"\n";
         let parsed: crate::Config = serde_yaml::from_str(yaml).unwrap();
         assert!(parsed.primitives["neutral"].ic.is_none());
+    }
+
+    #[test]
+    fn config_with_accents_roundtrips() {
+        let yaml = "primitives:\n  neutral:\n    light: \"#FFFFFF\"\n    base: \"#787880\"\n    dark: \"#101012\"\naccents:\n  brand: \"#007AFF\"\n";
+        let parsed: crate::Config = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(parsed.accents["brand"], "#007AFF");
     }
 }
