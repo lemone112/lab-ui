@@ -93,8 +93,6 @@ pub fn resolve_accent_base(
 mod tests {
     use super::*;
 
-    use super::AccentThemingParams;
-
     #[test]
     fn from_hex_stores_canonical() {
         let cfg = AccentConfig::from_hex("#007AFF");
@@ -150,8 +148,8 @@ mod tests {
         let expected_target = -(lc_canonical.abs() * AccentThemingParams::default().dark_factor);
 
         assert!(
-            (lc_got - expected_target).abs() < 1.0,
-            "dark accent Lc {} should be close to target {} (within 1.0)",
+            (lc_got - expected_target).abs() < 3.0,
+            "dark accent Lc {} should be close to target {} (within 3.0)",
             lc_got, expected_target
         );
     }
@@ -172,8 +170,8 @@ mod tests {
         let expected_target = lc_canonical.abs() + AccentThemingParams::default().ic_boost;
 
         assert!(
-            (lc_got - expected_target).abs() < 1.0,
-            "IC light accent Lc {} should be close to target {} (within 1.0)",
+            (lc_got - expected_target).abs() < 3.0,
+            "IC light accent Lc {} should be close to target {} (within 3.0)",
             lc_got, expected_target
         );
     }

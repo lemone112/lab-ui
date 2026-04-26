@@ -63,6 +63,9 @@ mod tests {
         let (scss2, json2) = crate::generate(&cfg).unwrap();
         assert_eq!(scss1, scss2, "SCSS output must be deterministic across runs");
         assert_eq!(json1, json2, "JSON output must be deterministic across runs");
+
+        // Logical order: :root must come first.
+        assert!(scss1.starts_with(":root {"), "SCSS must start with :root block");
     }
 
     #[test]
@@ -94,7 +97,17 @@ mod tests {
         cfg.accents.insert("brand".into(), "#007AFF".into());
 
         let (scss, _) = crate::generate(&cfg).unwrap();
-        let root_count = scss.matches(":root {").count();
-        assert_eq!(root_count, 1, ":root must appear exactly once, got {}", root_count);
+        for selector in [":root", ".dark", ".ic", ".dark.ic"] {
+            let count = scss.lines().filter(|line| line.starts_with(&format!("{} {{", selector))).count();
+            assert_eq!(count, 1, "{} must appear exactly once, got {}", selector, count);
+        }
+    }
+
+    #[test]
+    fn generate_fails_on_invalid_hex() {
+        let mut cfg = default_config();
+        cfg.primitives.get_mut("neutral").unwrap().light = "not-a-hex".into();
+        let result = crate::generate(&cfg);
+        assert!(result.is_err(), "generate must fail with invalid hex");
     }
 }

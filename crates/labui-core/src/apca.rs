@@ -1,6 +1,6 @@
 use crate::color::ucs::Cam16Ucs;
 use crate::color::viewing_conditions::ViewingConditions;
-use crate::srgb::{srgb_from_hex, xyz_to_srgb};
+use crate::srgb::xyz_to_srgb;
 
 // ------------------------------------------------------------------
 // APCA constants (0.98G-4g)
@@ -19,13 +19,23 @@ const LO_BOW_OFFSET: f64 = 0.027;
 const LO_CLIP: f64 = 0.001;
 const DELTA_Y_MIN: f64 = 0.000_5;
 
-/// Convert an sRGB hex string to relative luminance `Y`.
+/// Convert an sRGB hex string to relative luminance `Y` using the
+/// **pure power-law 2.4** transfer used by the APCA reference
+/// implementation (Myndex 0.98G-4g).
 ///
-/// Uses the official sRGB → linear transfer with a 2.4 exponent,
-/// matching the APCA reference implementation.
+/// This deliberately does **not** use the IEC 61966-2-1 piecewise
+/// sRGB curve (`v/12.92` for dark values) because APCA was
+/// calibrated against the simple `pow(chan/255, 2.4)` model.
 pub fn srgb_hex_to_y(hex: &str) -> Result<f64, String> {
-    let rgb = srgb_from_hex(hex)?;
-    Ok(0.212_672_9 * rgb[0] + 0.715_152_2 * rgb[1] + 0.072_175_0 * rgb[2])
+    let hex = hex.trim_start_matches('#');
+    if hex.len() != 6 {
+        return Err(format!("expected #RRGGBB, got #{}", hex));
+    }
+    let parse = |s: &str| u8::from_str_radix(s, 16).map_err(|e| format!("invalid hex '{}': {}", s, e));
+    let r = parse(&hex[0..2])? as f64 / 255.0;
+    let g = parse(&hex[2..4])? as f64 / 255.0;
+    let b = parse(&hex[4..6])? as f64 / 255.0;
+    Ok(0.212_672_9 * r.powf(2.4) + 0.715_152_2 * g.powf(2.4) + 0.072_175_0 * b.powf(2.4))
 }
 
 /// APCA forward contrast: return `Lc` for a text/background pair.
@@ -203,8 +213,8 @@ mod tests {
         let y_brand = srgb_hex_to_y("#007AFF").unwrap();
         let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
         let lc = apca_contrast(y_brand, y_white);
-        // From manual calculation: ~64
-        assert!((lc - 64.0).abs() < 2.0, "Brand on white Lc expected ~64, got {}", lc);
+        // From manual calculation with pure power-law 2.4: ~66.5
+        assert!((lc - 66.5).abs() < 2.0, "Brand on white Lc expected ~66.5, got {}", lc);
     }
 
     #[test]
