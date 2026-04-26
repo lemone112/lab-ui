@@ -22,7 +22,16 @@ struct ScaleConfig {
     base: String,
     dark: String,
     #[serde(default)]
+    ic: Option<IcAnchors>,
+    #[serde(default)]
     curve: CurveConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct IcAnchors {
+    light: String,
+    base: String,
+    dark: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -71,8 +80,6 @@ fn main() {
     let config: Config = serde_yaml::from_str(&yaml).expect("failed to parse config.yaml");
 
     let mut scss = String::new();
-    scss.push_str(":root {\n");
-
     let mut json_map: HashMap<String, String> = HashMap::new();
 
     for (name, scale_cfg) in &config.primitives {
@@ -81,34 +88,78 @@ fn main() {
             hue_ease: scale_cfg.curve.hue_ease,
             chroma_peak: scale_cfg.curve.chroma_peak,
         };
-        let scale = match labui_core::neutral::create_neutral_light_scale(
-            &scale_cfg.light,
-            &scale_cfg.base,
-            &scale_cfg.dark,
-            &params,
+
+        // Normal light scale → :root
+        let light = match labui_core::neutral::create_neutral_light_scale(
+            &scale_cfg.light, &scale_cfg.base, &scale_cfg.dark, &params,
         ) {
             Ok(s) => s,
-            Err(e) => {
-                eprintln!("error generating scale '{}': {}", name, e);
-                std::process::exit(1);
-            }
+            Err(e) => { eprintln!("error generating light scale '{}': {}", name, e); std::process::exit(1); }
         };
 
-        for (i, hex) in scale.iter().enumerate() {
-            let var_name = format!("--{}-{}", name, i);
-            scss.push_str(&format!("  {}: {};\n", var_name, hex.to_lowercase()));
-            json_map.insert(var_name.clone(), hex.to_lowercase());
+        // Normal dark scale → .dark
+        let dark = match labui_core::neutral::create_neutral_dark_scale(
+            &scale_cfg.light, &scale_cfg.base, &scale_cfg.dark, &params,
+        ) {
+            Ok(s) => s,
+            Err(e) => { eprintln!("error generating dark scale '{}': {}", name, e); std::process::exit(1); }
+        };
+
+        scss.push_str(":root {\n");
+        for (i, hex) in light.iter().enumerate() {
+            let var = format!("--{}-{}", name, i);
+            scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
+            json_map.insert(format!("root-{}", var), hex.to_lowercase());
+        }
+        scss.push_str("}\n");
+
+        scss.push_str(".dark {\n");
+        for (i, hex) in dark.iter().enumerate() {
+            let var = format!("--{}-{}", name, i);
+            scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
+            json_map.insert(format!("dark-{}", var), hex.to_lowercase());
+        }
+        scss.push_str("}\n");
+
+        // IC scales (only if IC anchors provided)
+        if let Some(ref ic) = scale_cfg.ic {
+            let ic_light = match labui_core::neutral::create_neutral_light_scale(
+                &ic.light, &ic.base, &ic.dark, &params,
+            ) {
+                Ok(s) => s,
+                Err(e) => { eprintln!("error generating IC light scale '{}': {}", name, e); std::process::exit(1); }
+            };
+
+            let ic_dark = match labui_core::neutral::create_neutral_dark_scale(
+                &ic.light, &ic.base, &ic.dark, &params,
+            ) {
+                Ok(s) => s,
+                Err(e) => { eprintln!("error generating IC dark scale '{}': {}", name, e); std::process::exit(1); }
+            };
+
+            scss.push_str(".ic {\n");
+            for (i, hex) in ic_light.iter().enumerate() {
+                let var = format!("--{}-{}", name, i);
+                scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
+                json_map.insert(format!("ic-{}", var), hex.to_lowercase());
+            }
+            scss.push_str("}\n");
+
+            scss.push_str(".dark.ic {\n");
+            for (i, hex) in ic_dark.iter().enumerate() {
+                let var = format!("--{}-{}", name, i);
+                scss.push_str(&format!("  {}: {};\n", var, hex.to_lowercase()));
+                json_map.insert(format!("dark-ic-{}", var), hex.to_lowercase());
+            }
+            scss.push_str("}\n");
         }
     }
 
     for (semantic_name, primitive_ref) in &config.semantic {
         let var_name = format!("--{}", semantic_name.replace('_', "-"));
         let target = format!("--{}", primitive_ref);
-        scss.push_str(&format!("  {}: var({});\n", var_name, target));
-        json_map.insert(var_name.clone(), format!("var({})", target));
+        scss.push_str(&format!("{} {{ {}: var({}); }}\n", ":root", var_name, target));
     }
-
-    scss.push_str("}\n");
 
     fs::create_dir_all(Path::new(&config.output.scss).parent().unwrap_or(Path::new(".")))
         .expect("failed to create output directory");

@@ -3,6 +3,10 @@ primitives:
     light: "#FFFFFF"
     base:  "#787880"
     dark:  "#101012"
+    ic:
+      light: "#FFFFFF"
+      base:  "#72727A"
+      dark:  "#000000"
     # Optional curve tuning.  Omit to use defaults.
     # curve:
     #   lightness_ease: 1.7
@@ -10,10 +14,10 @@ primitives:
     #   chroma_peak: 0.35
 
 semantic:
-  bg-surface:    "neutral-0"
+  bg-surface:       "neutral-0"
   bg-surface-hover: "neutral-1"
-  text-primary:  "neutral-12"
-  text-secondary: "neutral-8"
+  text-primary:     "neutral-12"
+  text-secondary:   "neutral-8"
 
 output:
   scss: "dist/tokens.scss"

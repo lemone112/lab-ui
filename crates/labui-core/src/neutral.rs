@@ -23,6 +23,24 @@ impl Default for CurveParams {
     }
 }
 
+/// Generate a 13-step neutral scale for dark mode.
+///
+/// Uses the same anchors but swaps extremes and inverts the ease exponent
+/// so steps are denser near the dark end (backgrounds).
+/// The base anchor (step 6) is identical to light mode — it is the pivot.
+pub fn create_neutral_dark_scale(
+    light: &str,
+    base: &str,
+    dark: &str,
+    params: &CurveParams,
+) -> Result<Vec<String>, String> {
+    let dark_params = CurveParams {
+        lightness_ease: 1.0 / params.lightness_ease,
+        ..*params
+    };
+    create_neutral_light_scale(dark, base, light, &dark_params)
+}
+
 /// Generate a 13-step neutral scale for light mode.
 pub fn create_neutral_light_scale(
     light: &str,
@@ -178,5 +196,31 @@ mod tests {
     fn rejects_malformed_hex() {
         let err = create_neutral_light_scale("#GGGGGG", "#787880", "#101012", &CurveParams::default());
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn dark_step6_equals_light_step6() {
+        let light = create_neutral_light_scale("#FFFFFF", "#787880", "#101012", &CurveParams::default()).unwrap();
+        let dark = create_neutral_dark_scale("#FFFFFF", "#787880", "#101012", &CurveParams::default()).unwrap();
+        assert_eq!(light[6].to_uppercase(), dark[6].to_uppercase());
+    }
+
+    #[test]
+    fn dark_scale_is_monotonically_increasing() {
+        let scale = create_neutral_dark_scale("#FFFFFF", "#787880", "#101012", &CurveParams::default()).unwrap();
+        let mut prev_jp = f64::MIN;
+        for hex in &scale {
+            let ucs = Cam16Ucs::from_hex(hex).unwrap();
+            assert!(ucs.jp >= prev_jp - 1e-9);
+            prev_jp = ucs.jp;
+        }
+    }
+
+    #[test]
+    fn dark_anchors_are_exact() {
+        let scale = create_neutral_dark_scale("#FFFFFF", "#787880", "#101012", &CurveParams::default()).unwrap();
+        assert_eq!(scale[0].to_uppercase(), "#101012");
+        assert_eq!(scale[6].to_uppercase(), "#787880");
+        assert_eq!(scale[12].to_uppercase(), "#FFFFFF");
     }
 }

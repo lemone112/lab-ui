@@ -38,6 +38,16 @@
         "light": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
         "base":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
         "dark":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "ic": {
+          "type": "object",
+          "description": "Increased-contrast anchors (inherits parent curve)",
+          "required": ["light", "base", "dark"],
+          "properties": {
+            "light": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "base":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "dark":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+          }
+        },
         "curve": {
           "type": "object",
           "properties": {
