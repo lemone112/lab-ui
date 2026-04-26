@@ -59,9 +59,10 @@ mod tests {
         cfg.accents.insert("brand".into(), "#007AFF".into());
         cfg.accents.insert("red".into(), "#FF3B30".into());
 
-        let (scss1, _) = crate::generate(&cfg).unwrap();
-        let (scss2, _) = crate::generate(&cfg).unwrap();
-        assert_eq!(scss1, scss2, "output must be deterministic across runs");
+        let (scss1, json1) = crate::generate(&cfg).unwrap();
+        let (scss2, json2) = crate::generate(&cfg).unwrap();
+        assert_eq!(scss1, scss2, "SCSS output must be deterministic across runs");
+        assert_eq!(json1, json2, "JSON output must be deterministic across runs");
     }
 
     #[test]

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -73,9 +73,6 @@ impl Default for AccentThemingConfig {
     }
 }
 
-fn default_scss() -> String { "dist/tokens.scss".into() }
-fn default_json() -> String { "dist/tokens.json".into() }
-
 #[derive(Debug, Deserialize, Serialize, Default)]
 struct OutputConfig {
     #[serde(default = "default_scss")]
@@ -84,24 +81,24 @@ struct OutputConfig {
     json: String,
 }
 
+fn default_scss() -> String { "dist/tokens.scss".into() }
+fn default_json() -> String { "dist/tokens.json".into() }
 fn default_lightness_ease() -> f64 { 1.7 }
 fn default_hue_ease() -> f64 { 0.6 }
 fn default_chroma_peak() -> f64 { 0.35 }
 fn default_dark_factor() -> f64 { 0.7 }
 fn default_ic_boost() -> f64 { 15.0 }
 
-
 struct SelectorBlock {
     json_prefix: String,
     neutral_vars: Vec<(String, String)>,
     accent_vars: Vec<(String, String)>,
-    bg_hex: String,
     is_dark: bool,
     is_ic: bool,
 }
 
 fn generate(config: &Config) -> Result<(String, String), String> {
-    // Resolve background anchors for accent generation.
+    // Resolve background anchors for accent generation (from "neutral" or fallback).
     let (bg_light, bg_dark, bg_ic_light, bg_ic_dark) =
         if let Some(neutral) = config.primitives.get("neutral") {
             (
@@ -130,47 +127,13 @@ fn generate(config: &Config) -> Result<(String, String), String> {
 
     let mut blocks: BTreeMap<String, SelectorBlock> = BTreeMap::new();
 
-    // Initialise selectors.
-    let themes = [
-        (":root", "root-", bg_light.clone(), false, false),
-        (".dark", "dark-", bg_dark.clone(), true, false),
-    ];
-    for (selector, json_prefix, bg_hex, is_dark, is_ic) in &themes {
-        blocks.insert(selector.to_string(), SelectorBlock {
-            json_prefix: json_prefix.to_string(),
-            neutral_vars: Vec::new(),
-            accent_vars: Vec::new(),
-            bg_hex: bg_hex.clone(),
-            is_dark: *is_dark,
-            is_ic: *is_ic,
-        });
-    }
-    if let (Some(ic_light), Some(ic_dark)) = (&bg_ic_light, &bg_ic_dark) {
-        blocks.insert(".ic".to_string(), SelectorBlock {
-            json_prefix: "ic-".to_string(),
-            neutral_vars: Vec::new(),
-            accent_vars: Vec::new(),
-            bg_hex: ic_light.clone(),
-            is_dark: false,
-            is_ic: true,
-        });
-        blocks.insert(".dark.ic".to_string(), SelectorBlock {
-            json_prefix: "dark-ic-".to_string(),
-            neutral_vars: Vec::new(),
-            accent_vars: Vec::new(),
-            bg_hex: ic_dark.clone(),
-            is_dark: true,
-            is_ic: true,
-        });
-    }
-
     let theming_params = labui_core::accent::AccentThemingParams {
         dark_factor: config.accent_theming.dark_factor,
         ic_boost: config.accent_theming.ic_boost,
     };
 
     // ------------------------------------------------------------------
-    // 1. Collect neutral variables.
+    // 1. Collect neutral variables (lazy block creation).
     // ------------------------------------------------------------------
     for (name, scale_cfg) in &config.primitives {
         let params = labui_core::neutral::CurveParams {
@@ -211,21 +174,32 @@ fn generate(config: &Config) -> Result<(String, String), String> {
             (None, None)
         };
 
-        let add_vars = |blocks: &mut BTreeMap<String, SelectorBlock>, selector: &str, scale: &[String]| {
-            let block = blocks.get_mut(selector).unwrap();
+        let add_vars = |blocks: &mut BTreeMap<String, SelectorBlock>,
+                        selector: &str,
+                        json_prefix: &str,
+                        scale: &[String],
+                        is_dark: bool,
+                        is_ic: bool| {
+            let block = blocks.entry(selector.to_string()).or_insert_with(|| SelectorBlock {
+                json_prefix: json_prefix.to_string(),
+                neutral_vars: Vec::new(),
+                accent_vars: Vec::new(),
+                is_dark,
+                is_ic,
+            });
             for (i, hex) in scale.iter().enumerate() {
                 let var = format!("--{}-{}", name, i);
                 block.neutral_vars.push((var, hex.to_lowercase()));
             }
         };
 
-        add_vars(&mut blocks, ":root", &light);
-        add_vars(&mut blocks, ".dark", &dark);
-        if ic_light.is_some() {
-            add_vars(&mut blocks, ".ic", ic_light.as_ref().unwrap());
+        add_vars(&mut blocks, ":root", "root-", &light, false, false);
+        add_vars(&mut blocks, ".dark", "dark-", &dark, true, false);
+        if let Some(ref ic_l) = ic_light {
+            add_vars(&mut blocks, ".ic", "ic-", ic_l, false, true);
         }
-        if ic_dark.is_some() {
-            add_vars(&mut blocks, ".dark.ic", ic_dark.as_ref().unwrap());
+        if let Some(ref ic_d) = ic_dark {
+            add_vars(&mut blocks, ".dark.ic", "dark-ic-", ic_d, true, true);
         }
     }
 
@@ -235,9 +209,16 @@ fn generate(config: &Config) -> Result<(String, String), String> {
     if !config.accents.is_empty() {
         for (accent_name, accent_hex) in &config.accents {
             let cfg = labui_core::accent::AccentConfig::from_hex(accent_hex);
-            for (_, block) in blocks.iter_mut() {
+            for (selector, block) in blocks.iter_mut() {
+                let bg_hex = match selector.as_str() {
+                    ":root" => &bg_light,
+                    ".dark" => &bg_dark,
+                    ".ic" => bg_ic_light.as_deref().unwrap_or(&bg_light),
+                    ".dark.ic" => bg_ic_dark.as_deref().unwrap_or(&bg_dark),
+                    _ => continue,
+                };
                 match labui_core::accent::resolve_accent_base(
-                    &cfg, block.is_dark, block.is_ic, &block.bg_hex, &theming_params
+                    &cfg, block.is_dark, block.is_ic, bg_hex, &theming_params
                 ) {
                     Ok(hex) => {
                         let var = format!("--accent-{}", accent_name);
@@ -250,12 +231,14 @@ fn generate(config: &Config) -> Result<(String, String), String> {
     }
 
     // ------------------------------------------------------------------
-    // 3. Emit each selector exactly once.
+    // 3. Emit each selector exactly once in logical order.
     // ------------------------------------------------------------------
     let mut scss = String::new();
-    let mut json_map: HashMap<String, String> = HashMap::new();
+    let mut json_map: BTreeMap<String, String> = BTreeMap::new();
 
-    for (selector, block) in &blocks {
+    let selector_order = [":root", ".dark", ".ic", ".dark.ic"];
+    for selector in &selector_order {
+        let Some(block) = blocks.get(*selector) else { continue };
         scss.push_str(&format!("{} {{\n", selector));
         for (var, hex) in &block.neutral_vars {
             scss.push_str(&format!("  {}: {};\n", var, hex));

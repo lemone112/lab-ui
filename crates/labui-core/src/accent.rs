@@ -93,10 +93,7 @@ pub fn resolve_accent_base(
 mod tests {
     use super::*;
 
-    const DEFAULT_PARAMS: AccentThemingParams = AccentThemingParams {
-        dark_factor: 0.7,
-        ic_boost: 15.0,
-    };
+    use super::AccentThemingParams;
 
     #[test]
     fn from_hex_stores_canonical() {
@@ -107,14 +104,14 @@ mod tests {
     #[test]
     fn light_theme_returns_canonical() {
         let cfg = AccentConfig::from_hex("#007AFF");
-        let got = resolve_accent_base(&cfg, false, false, "#FFFFFF", &DEFAULT_PARAMS).unwrap();
+        let got = resolve_accent_base(&cfg, false, false, "#FFFFFF", &AccentThemingParams::default()).unwrap();
         assert_eq!(got.to_ascii_uppercase(), "#007AFF");
     }
 
     #[test]
     fn dark_theme_returns_lighter() {
         let cfg = AccentConfig::from_hex("#007AFF");
-        let got = resolve_accent_base(&cfg, true, false, "#101012", &DEFAULT_PARAMS).unwrap();
+        let got = resolve_accent_base(&cfg, true, false, "#101012", &AccentThemingParams::default()).unwrap();
         let y_original = srgb_hex_to_y("#007AFF").unwrap();
         let y_derived = srgb_hex_to_y(&got).unwrap();
         assert!(
@@ -127,7 +124,7 @@ mod tests {
     #[test]
     fn ic_light_returns_darker() {
         let cfg = AccentConfig::from_hex("#007AFF");
-        let got = resolve_accent_base(&cfg, false, true, "#FFFFFF", &DEFAULT_PARAMS).unwrap();
+        let got = resolve_accent_base(&cfg, false, true, "#FFFFFF", &AccentThemingParams::default()).unwrap();
         let y_original = srgb_hex_to_y("#007AFF").unwrap();
         let y_derived = srgb_hex_to_y(&got).unwrap();
         assert!(
@@ -141,7 +138,7 @@ mod tests {
     fn dark_theme_apca_contract() {
         let cfg = AccentConfig::from_hex("#007AFF");
         let bg_dark = "#101012";
-        let got = resolve_accent_base(&cfg, true, false, bg_dark, &DEFAULT_PARAMS).unwrap();
+        let got = resolve_accent_base(&cfg, true, false, bg_dark, &AccentThemingParams::default()).unwrap();
 
         let y_got = srgb_hex_to_y(&got).unwrap();
         let y_bg = srgb_hex_to_y(bg_dark).unwrap();
@@ -150,7 +147,7 @@ mod tests {
         let y_canonical = srgb_hex_to_y("#007AFF").unwrap();
         let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
         let lc_canonical = apca_contrast(y_canonical, y_white);
-        let expected_target = -(lc_canonical.abs() * DEFAULT_PARAMS.dark_factor);
+        let expected_target = -(lc_canonical.abs() * AccentThemingParams::default().dark_factor);
 
         assert!(
             (lc_got - expected_target).abs() < 1.0,
@@ -163,7 +160,7 @@ mod tests {
     fn ic_light_apca_contract() {
         let cfg = AccentConfig::from_hex("#007AFF");
         let bg = "#FFFFFF";
-        let got = resolve_accent_base(&cfg, false, true, bg, &DEFAULT_PARAMS).unwrap();
+        let got = resolve_accent_base(&cfg, false, true, bg, &AccentThemingParams::default()).unwrap();
 
         let y_got = srgb_hex_to_y(&got).unwrap();
         let y_bg = srgb_hex_to_y(bg).unwrap();
@@ -172,7 +169,7 @@ mod tests {
         let y_canonical = srgb_hex_to_y("#007AFF").unwrap();
         let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
         let lc_canonical = apca_contrast(y_canonical, y_white);
-        let expected_target = lc_canonical.abs() + DEFAULT_PARAMS.ic_boost;
+        let expected_target = lc_canonical.abs() + AccentThemingParams::default().ic_boost;
 
         assert!(
             (lc_got - expected_target).abs() < 1.0,
