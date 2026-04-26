@@ -103,10 +103,9 @@ pub fn apca_inverse(bg_y: f64, target_lc: f64, canonical: &Cam16Ucs) -> Option<C
             ap: mp * hr.cos(),
             bp: mp * hr.sin(),
         };
-        // Apply gamut clamp and encode through APCA-specific pure
-        // power-law hex so that compute_lc and the final result use
-        // the exact same Y path.
-        let candidate = find_closest_in_gamut(candidate);
+        // Encode through APCA-specific pure power-law hex (which
+        // includes gamut clamping) so that compute_lc and the final
+        // result use the exact same Y path.
         let hex = apca_to_hex(&candidate);
         let y_fg = srgb_hex_to_y(&hex).unwrap_or(0.0);
         apca_contrast(y_fg, bg_y)
@@ -142,7 +141,7 @@ pub fn apca_inverse(bg_y: f64, target_lc: f64, canonical: &Cam16Ucs) -> Option<C
         bp: mp * hr.sin(),
     };
 
-    Some(find_closest_in_gamut(result))
+    Some(result)
 }
 
 /// APCA-specific hex encoding: pure power-law 2.4 (no piecewise segment).
@@ -153,6 +152,7 @@ pub fn apca_inverse(bg_y: f64, target_lc: f64, canonical: &Cam16Ucs) -> Option<C
 /// guarantees that `srgb_hex_to_y(apca_to_hex(&ucs))` round-trips to the
 /// original linear luminance (within 8-bit quantisation).
 pub fn apca_to_hex(ucs: &Cam16Ucs) -> String {
+    let ucs = find_closest_in_gamut(*ucs);
     let xyz = ucs.to_xyz(&ViewingConditions::srgb());
     let rgb = xyz_to_srgb(xyz);
     // Pure power-law encode (matching APCA reference decode).
@@ -248,10 +248,10 @@ mod tests {
         let target = apca_contrast(y_canonical, y_white);
 
         let result = apca_inverse(y_white, target, &canonical).unwrap();
-        let y_result = result.to_xyz(&ViewingConditions::srgb())[1];
+        let y_result = srgb_hex_to_y(&apca_to_hex(&result)).unwrap();
         let lc_result = apca_contrast(y_result, y_white);
 
-        assert!((lc_result - target).abs() < 0.1, "inverse roundtrip failed: {} vs {}", lc_result, target);
+        assert!((lc_result - target).abs() < 1.0, "inverse roundtrip failed: {} vs {}", lc_result, target);
     }
 
     #[test]
@@ -260,7 +260,7 @@ mod tests {
         let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
 
         let result = apca_inverse(y_white, 75.0, &canonical).unwrap();
-        let y_result = result.to_xyz(&ViewingConditions::srgb())[1];
+        let y_result = srgb_hex_to_y(&apca_to_hex(&result)).unwrap();
         let lc_result = apca_contrast(y_result, y_white);
 
         assert!(lc_result > 70.0, "expected Lc > 70, got {}", lc_result);
@@ -275,7 +275,7 @@ mod tests {
         let y_black = srgb_hex_to_y("#000000").unwrap();
 
         let result = apca_inverse(y_black, -60.0, &canonical).unwrap();
-        let y_result = result.to_xyz(&ViewingConditions::srgb())[1];
+        let y_result = srgb_hex_to_y(&apca_to_hex(&result)).unwrap();
         let lc_result = apca_contrast(y_result, y_black);
 
         assert!(lc_result < -55.0, "expected Lc < -55, got {}", lc_result);
