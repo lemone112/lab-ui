@@ -19,6 +19,22 @@
         "pattern": "^#[0-9A-Fa-f]{6}$"
       }
     },
+    "accent_theming": {
+      "type": "object",
+      "description": "Parameters for APCA-based accent theme generation",
+      "properties": {
+        "dark_factor": {
+          "type": "number",
+          "default": 0.7,
+          "description": "Dark-mode contrast as a fraction of light-mode contrast magnitude"
+        },
+        "ic_boost": {
+          "type": "number",
+          "default": 15.0,
+          "description": "Increased-contrast boost in APCA Lc"
+        }
+      }
+    },
     "output": {
       "type": "object",
       "properties": {

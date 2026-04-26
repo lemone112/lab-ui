@@ -12,6 +12,10 @@ accents:
   brand: "#007AFF"
   red:   "#FF3B30"
 
+accent_theming:
+  dark_factor: 0.7
+  ic_boost: 15.0
+
 output:
   scss: "dist/tokens.scss"
   json: "dist/tokens.json"

@@ -1,13 +1,28 @@
 use crate::apca::{apca_contrast, apca_inverse, srgb_hex_to_y};
 use crate::color::ucs::Cam16Ucs;
 
-/// Dark-theme contrast factor, empirically derived from Apple iOS System
-/// Color patterns: dark-mode accents need ~70 % of the light-mode contrast
-/// magnitude to avoid excessive brightness.
-const DARK_FACTOR: f64 = 0.7;
+/// Parameters that control how a canonical accent is adapted across
+/// themes.  These are empirically derived from Apple iOS System Color
+/// patterns but exposed so users can tune them.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AccentThemingParams {
+    /// Dark-mode contrast as a fraction of the light-mode contrast
+    /// magnitude.  Value ~0.7 prevents dark accents from becoming
+    /// excessively bright.
+    pub dark_factor: f64,
+    /// Increased-contrast boost (APCA Lc).  Added to the absolute
+    /// light-mode contrast for IC variants.
+    pub ic_boost: f64,
+}
 
-/// Increased-contrast boost (APCA Lc).  IC variants shift by ±15 Lc.
-const IC_BOOST: f64 = 15.0;
+impl Default for AccentThemingParams {
+    fn default() -> Self {
+        Self {
+            dark_factor: 0.7,
+            ic_boost: 15.0,
+        }
+    }
+}
 
 /// Accent configuration: a single canonical hex.
 ///
@@ -30,11 +45,22 @@ impl AccentConfig {
 /// * `is_dark` — dark mode (light text on dark background).
 /// * `is_ic`  — increased contrast.
 /// * `bg_hex` — reference background for this theme.
+/// * `params` — theming parameters (`dark_factor`, `ic_boost`).
+///
+/// # IC Dark formula note
+///
+/// The IC Dark target is `-(lc_on_white + ic_boost) * dark_factor`.
+/// For Brand this yields ~-55 Lc against Figma's ~-47.  The 8 Lc gap
+/// is acceptable because the design system does not copy Figma 1:1;
+/// it algorithmically derives values.  Users who need exact Figma
+/// matching can lower `dark_factor` or `ic_boost` via
+/// [`AccentThemingParams`].
 pub fn resolve_accent_base(
     config: &AccentConfig,
     is_dark: bool,
     is_ic: bool,
     bg_hex: &str,
+    params: &AccentThemingParams,
 ) -> Result<String, String> {
     let y_canonical = srgb_hex_to_y(&config.canonical)?;
     let y_white = srgb_hex_to_y("#FFFFFF")?;
@@ -47,9 +73,9 @@ pub fn resolve_accent_base(
     }
 
     let target_lc = match (is_dark, is_ic) {
-        (true, false) => -lc_on_white.abs() * DARK_FACTOR,
-        (false, true) => lc_on_white.abs() + IC_BOOST,
-        (true, true) => -(lc_on_white.abs() + IC_BOOST) * DARK_FACTOR,
+        (true, false) => -lc_on_white.abs() * params.dark_factor,
+        (false, true) => lc_on_white.abs() + params.ic_boost,
+        (true, true) => -(lc_on_white.abs() + params.ic_boost) * params.dark_factor,
         (false, false) => unreachable!(),
     };
 
@@ -67,6 +93,11 @@ pub fn resolve_accent_base(
 mod tests {
     use super::*;
 
+    const DEFAULT_PARAMS: AccentThemingParams = AccentThemingParams {
+        dark_factor: 0.7,
+        ic_boost: 15.0,
+    };
+
     #[test]
     fn from_hex_stores_canonical() {
         let cfg = AccentConfig::from_hex("#007AFF");
@@ -76,14 +107,14 @@ mod tests {
     #[test]
     fn light_theme_returns_canonical() {
         let cfg = AccentConfig::from_hex("#007AFF");
-        let got = resolve_accent_base(&cfg, false, false, "#FFFFFF").unwrap();
+        let got = resolve_accent_base(&cfg, false, false, "#FFFFFF", &DEFAULT_PARAMS).unwrap();
         assert_eq!(got.to_ascii_uppercase(), "#007AFF");
     }
 
     #[test]
     fn dark_theme_returns_lighter() {
         let cfg = AccentConfig::from_hex("#007AFF");
-        let got = resolve_accent_base(&cfg, true, false, "#101012").unwrap();
+        let got = resolve_accent_base(&cfg, true, false, "#101012", &DEFAULT_PARAMS).unwrap();
         let y_original = srgb_hex_to_y("#007AFF").unwrap();
         let y_derived = srgb_hex_to_y(&got).unwrap();
         assert!(
@@ -96,7 +127,7 @@ mod tests {
     #[test]
     fn ic_light_returns_darker() {
         let cfg = AccentConfig::from_hex("#007AFF");
-        let got = resolve_accent_base(&cfg, false, true, "#FFFFFF").unwrap();
+        let got = resolve_accent_base(&cfg, false, true, "#FFFFFF", &DEFAULT_PARAMS).unwrap();
         let y_original = srgb_hex_to_y("#007AFF").unwrap();
         let y_derived = srgb_hex_to_y(&got).unwrap();
         assert!(
@@ -110,7 +141,7 @@ mod tests {
     fn dark_theme_apca_contract() {
         let cfg = AccentConfig::from_hex("#007AFF");
         let bg_dark = "#101012";
-        let got = resolve_accent_base(&cfg, true, false, bg_dark).unwrap();
+        let got = resolve_accent_base(&cfg, true, false, bg_dark, &DEFAULT_PARAMS).unwrap();
 
         let y_got = srgb_hex_to_y(&got).unwrap();
         let y_bg = srgb_hex_to_y(bg_dark).unwrap();
@@ -119,11 +150,33 @@ mod tests {
         let y_canonical = srgb_hex_to_y("#007AFF").unwrap();
         let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
         let lc_canonical = apca_contrast(y_canonical, y_white);
-        let expected_target = -(lc_canonical.abs() * DARK_FACTOR);
+        let expected_target = -(lc_canonical.abs() * DEFAULT_PARAMS.dark_factor);
 
         assert!(
             (lc_got - expected_target).abs() < 1.0,
             "dark accent Lc {} should be close to target {} (within 1.0)",
+            lc_got, expected_target
+        );
+    }
+
+    #[test]
+    fn ic_light_apca_contract() {
+        let cfg = AccentConfig::from_hex("#007AFF");
+        let bg = "#FFFFFF";
+        let got = resolve_accent_base(&cfg, false, true, bg, &DEFAULT_PARAMS).unwrap();
+
+        let y_got = srgb_hex_to_y(&got).unwrap();
+        let y_bg = srgb_hex_to_y(bg).unwrap();
+        let lc_got = apca_contrast(y_got, y_bg);
+
+        let y_canonical = srgb_hex_to_y("#007AFF").unwrap();
+        let y_white = srgb_hex_to_y("#FFFFFF").unwrap();
+        let lc_canonical = apca_contrast(y_canonical, y_white);
+        let expected_target = lc_canonical.abs() + DEFAULT_PARAMS.ic_boost;
+
+        assert!(
+            (lc_got - expected_target).abs() < 1.0,
+            "IC light accent Lc {} should be close to target {} (within 1.0)",
             lc_got, expected_target
         );
     }
