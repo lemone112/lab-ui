@@ -1,8 +1,14 @@
-node_modules/
-dist/
-*.log
-.DS_Store
+# Temporary MCP extraction files
+figma_*.json
+mcp_*.py
+parse_figma.py
 
-# Rust
+# Build outputs
+dist/
 target/
 Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
