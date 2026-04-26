@@ -28,6 +28,6 @@ mod tests {
         let yaml = serde_yaml::to_string(&cfg).unwrap();
         let parsed: crate::Config = serde_yaml::from_str(&yaml).unwrap();
         assert_eq!(parsed.primitives["neutral"].base, "#787880");
-        assert_eq!(parsed.primitives["neutral"].curve.lightness_ease, 1.7);
+        assert_eq!(parsed.primitives["neutral"].curve.lightness_ease, crate::CurveConfig::default().lightness_ease);
     }
 }
