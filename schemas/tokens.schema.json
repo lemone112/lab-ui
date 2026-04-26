@@ -10,9 +10,6 @@
       "properties": {
         "neutral": {
           "$ref": "#/$defs/scaleConfig"
-        },
-        "accent": {
-          "$ref": "#/$defs/scaleConfig"
         }
       },
       "additionalProperties": false
@@ -40,7 +37,15 @@
       "properties": {
         "light": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
         "base":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
-        "dark":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+        "dark":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "curve": {
+          "type": "object",
+          "properties": {
+            "lightness_ease": { "type": "number", "default": 1.7 },
+            "hue_ease":       { "type": "number", "default": 0.6 },
+            "chroma_peak":    { "type": "number", "default": 0.35 }
+          }
+        }
       }
     }
   }
