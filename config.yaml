@@ -3,6 +3,12 @@ primitives:
     light: "#FFFFFF"
     base:  "#787880"
     dark:  "#101012"
+    # Optional curve tuning.  Omit to use defaults.
+    # curve:
+    #   lightness_ease: 1.7
+    #   hue_ease: 0.6
+    #   chroma_peak: 0.35
+    #   chroma_boost: 1.2
 
 semantic:
   bg-surface:    "neutral-0"

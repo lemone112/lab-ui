@@ -21,7 +21,37 @@ struct ScaleConfig {
     light: String,
     base: String,
     dark: String,
+    #[serde(default)]
+    curve: CurveConfig,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CurveConfig {
+    #[serde(default = "default_lightness_ease")]
+    lightness_ease: f64,
+    #[serde(default = "default_hue_ease")]
+    hue_ease: f64,
+    #[serde(default = "default_chroma_peak")]
+    chroma_peak: f64,
+    #[serde(default = "default_chroma_boost")]
+    chroma_boost: f64,
+}
+
+impl Default for CurveConfig {
+    fn default() -> Self {
+        Self {
+            lightness_ease: default_lightness_ease(),
+            hue_ease: default_hue_ease(),
+            chroma_peak: default_chroma_peak(),
+            chroma_boost: default_chroma_boost(),
+        }
+    }
+}
+
+fn default_lightness_ease() -> f64 { 1.7 }
+fn default_hue_ease() -> f64 { 0.6 }
+fn default_chroma_peak() -> f64 { 0.35 }
+fn default_chroma_boost() -> f64 { 1.2 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
 struct OutputConfig {
@@ -50,11 +80,24 @@ fn main() {
     let mut json_map: HashMap<String, String> = HashMap::new();
 
     for (name, scale_cfg) in &config.primitives {
-        let scale = labui_core::neutral::create_neutral_light_scale(
+        let params = labui_core::neutral::CurveParams {
+            lightness_ease: scale_cfg.curve.lightness_ease,
+            hue_ease: scale_cfg.curve.hue_ease,
+            chroma_peak: scale_cfg.curve.chroma_peak,
+            chroma_boost: scale_cfg.curve.chroma_boost,
+        };
+        let scale = match labui_core::neutral::create_neutral_light_scale(
             &scale_cfg.light,
             &scale_cfg.base,
             &scale_cfg.dark,
-        );
+            &params,
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("error generating scale '{}': {}", name, e);
+                std::process::exit(1);
+            }
+        };
 
         for (i, hex) in scale.iter().enumerate() {
             let var_name = format!("--{}-{}", name, i);
@@ -79,7 +122,7 @@ fn main() {
     fs::write(&config.output.json, serde_json::to_string_pretty(&json_map).unwrap())
         .expect("failed to write json");
 
-    println!("Generated:",);
+    println!("Generated:");
     println!("  {}", config.output.scss);
     println!("  {}", config.output.json);
 }

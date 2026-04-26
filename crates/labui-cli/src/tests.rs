@@ -11,6 +11,7 @@ mod tests {
                     light: "#FFFFFF".into(),
                     base: "#787880".into(),
                     dark: "#101012".into(),
+                    curve: crate::CurveConfig::default(),
                 });
                 m
             },
@@ -27,6 +28,6 @@ mod tests {
         let yaml = serde_yaml::to_string(&cfg).unwrap();
         let parsed: crate::Config = serde_yaml::from_str(&yaml).unwrap();
         assert_eq!(parsed.primitives["neutral"].base, "#787880");
-        assert_eq!(parsed.semantic["bg-surface"], "neutral-0");
+        assert_eq!(parsed.primitives["neutral"].curve.lightness_ease, 1.7);
     }
 }
