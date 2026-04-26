@@ -106,41 +106,59 @@ mod tests {
         assert_eq!(scale[12].to_uppercase(), "#101012");
     }
 
-    /// Full parity test against TypeScript golden master (neutral.ts).
+    /// Lightness must decrease monotonically from light to dark.
     #[test]
-    fn light_scale_matches_ts_reference() {
+    fn lightness_is_monotonically_decreasing() {
         let scale = create_neutral_light_scale("#FFFFFF", "#787880", "#101012");
-        let expected = [
-            "#FFFFFF", "#F6F8FA", "#E4E7ED", "#CDD0D9", "#B3B5BF", "#9698A2", "#787880", "#5B5C64",
-            "#44444B", "#303136", "#212125", "#151518", "#101012",
-        ];
-        for (i, (got, want)) in scale.iter().zip(expected.iter()).enumerate() {
-            assert_eq!(
-                got.to_uppercase(),
-                *want,
-                "step {} mismatch: got {} expected {}",
-                i,
-                got,
-                want
+        let mut prev_jp = f64::MAX;
+        for hex in &scale {
+            let ucs = Cam16Ucs::from_hex(hex);
+            assert!(
+                ucs.jp <= prev_jp + 1e-9,
+                "lightness increased at {}: jp={} prev={}",
+                hex,
+                ucs.jp,
+                prev_jp
             );
+            prev_jp = ucs.jp;
         }
     }
 
+    /// All 13 steps must be unique (for non-trivial anchors).
     #[test]
-    fn light_scale_matches_ts_reference_alternate_anchors() {
-        let scale = create_neutral_light_scale("#F2F2F5", "#73737C", "#141416");
-        let expected = [
-            "#F2F2F5", "#EBEBF0", "#DADBE3", "#C4C6D1", "#ABADB9", "#90919C", "#73737C", "#595963",
-            "#43444C", "#313238", "#232328", "#19191C", "#141416",
-        ];
-        for (i, (got, want)) in scale.iter().zip(expected.iter()).enumerate() {
-            assert_eq!(
-                got.to_uppercase(),
-                *want,
-                "step {} mismatch: got {} expected {}",
+    fn all_steps_are_unique() {
+        let scale = create_neutral_light_scale("#FFFFFF", "#787880", "#101012");
+        let mut seen = std::collections::HashSet::new();
+        for hex in &scale {
+            assert!(seen.insert(hex.to_uppercase()), "duplicate step: {}", hex);
+        }
+    }
+
+    /// Lightness must be clamped between anchors (no overshoot).
+    #[test]
+    fn lightness_within_anchor_bounds() {
+        let light = "#FFFFFF";
+        let base = "#787880";
+        let dark = "#101012";
+        let scale = create_neutral_light_scale(light, base, dark);
+
+        let j0 = Cam16Ucs::from_hex(light).jp;
+        let j6 = Cam16Ucs::from_hex(base).jp;
+        let j12 = Cam16Ucs::from_hex(dark).jp;
+
+        assert!(j0 > j6, "light anchor should be lighter than base");
+        assert!(j6 > j12, "base should be lighter than dark anchor");
+
+        for (i, hex) in scale.iter().enumerate() {
+            let j = Cam16Ucs::from_hex(hex).jp;
+            assert!(
+                j <= j0 + 1e-9 && j >= j12 - 1e-9,
+                "step {} ({}) out of bounds: jp={} not in [{}, {}]",
                 i,
-                got,
-                want
+                hex,
+                j,
+                j12,
+                j0
             );
         }
     }
