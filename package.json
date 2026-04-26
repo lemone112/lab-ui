@@ -1,0 +1,30 @@
+{
+  "name": "lab-ui-work",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lemone112/lab-ui.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lemone112/lab-ui/issues"
+  },
+  "homepage": "https://github.com/lemone112/lab-ui#readme",
+  "dependencies": {
+    "colorjs.io": "^0.6.1",
+    "culori": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/culori": "^4.0.1",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
+  }
+}
