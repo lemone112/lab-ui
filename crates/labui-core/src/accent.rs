@@ -1,4 +1,4 @@
-use crate::apca::{apca_contrast, apca_inverse, srgb_hex_to_y};
+use crate::apca::{apca_contrast, apca_inverse, apca_to_hex, srgb_hex_to_y};
 use crate::color::ucs::Cam16Ucs;
 
 /// Parameters that control how a canonical accent is adapted across
@@ -81,7 +81,7 @@ pub fn resolve_accent_base(
 
     let canonical_ucs = Cam16Ucs::from_hex(&config.canonical)?;
     match apca_inverse(y_bg, target_lc, &canonical_ucs) {
-        Some(ucs) => Ok(ucs.to_hex()),
+        Some(ucs) => Ok(apca_to_hex(&ucs)),
         None => Err(format!(
             "apca_inverse failed for {} on bg {} with target Lc {}",
             config.canonical, bg_hex, target_lc
@@ -148,8 +148,8 @@ mod tests {
         let expected_target = -(lc_canonical.abs() * AccentThemingParams::default().dark_factor);
 
         assert!(
-            (lc_got - expected_target).abs() < 3.0,
-            "dark accent Lc {} should be close to target {} (within 3.0)",
+            (lc_got - expected_target).abs() < 1.0,
+            "dark accent Lc {} should be close to target {} (within 1.0)",
             lc_got, expected_target
         );
     }
@@ -170,8 +170,8 @@ mod tests {
         let expected_target = lc_canonical.abs() + AccentThemingParams::default().ic_boost;
 
         assert!(
-            (lc_got - expected_target).abs() < 3.0,
-            "IC light accent Lc {} should be close to target {} (within 3.0)",
+            (lc_got - expected_target).abs() < 1.0,
+            "IC light accent Lc {} should be close to target {} (within 1.0)",
             lc_got, expected_target
         );
     }

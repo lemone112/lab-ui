@@ -103,8 +103,13 @@ pub fn apca_inverse(bg_y: f64, target_lc: f64, canonical: &Cam16Ucs) -> Option<C
             ap: mp * hr.cos(),
             bp: mp * hr.sin(),
         };
-        let y = candidate.to_xyz(&ViewingConditions::srgb())[1];
-        apca_contrast(y, bg_y)
+        // Apply gamut clamp and encode through APCA-specific pure
+        // power-law hex so that compute_lc and the final result use
+        // the exact same Y path.
+        let candidate = find_closest_in_gamut(candidate);
+        let hex = apca_to_hex(&candidate);
+        let y_fg = srgb_hex_to_y(&hex).unwrap_or(0.0);
+        apca_contrast(y_fg, bg_y)
     };
 
     let lc_lo = compute_lc(0.0);
@@ -138,6 +143,24 @@ pub fn apca_inverse(bg_y: f64, target_lc: f64, canonical: &Cam16Ucs) -> Option<C
     };
 
     Some(find_closest_in_gamut(result))
+}
+
+/// APCA-specific hex encoding: pure power-law 2.4 (no piecewise segment).
+///
+/// Standard `hex_from_srgb` uses the IEC 61966-2-1 piecewise curve.
+/// APCA was calibrated against a simplified model where encode and decode
+/// are both `pow(v, 2.4)`.  Using the same function for both directions
+/// guarantees that `srgb_hex_to_y(apca_to_hex(&ucs))` round-trips to the
+/// original linear luminance (within 8-bit quantisation).
+pub fn apca_to_hex(ucs: &Cam16Ucs) -> String {
+    let xyz = ucs.to_xyz(&ViewingConditions::srgb());
+    let rgb = xyz_to_srgb(xyz);
+    // Pure power-law encode (matching APCA reference decode).
+    let encode = |v: f64| v.clamp(0.0, 1.0).powf(1.0 / 2.4);
+    let r = (encode(rgb[0]) * 255.0).round() as u8;
+    let g = (encode(rgb[1]) * 255.0).round() as u8;
+    let b = (encode(rgb[2]) * 255.0).round() as u8;
+    format!("#{:02X}{:02X}{:02X}", r, g, b)
 }
 
 /// Return `true` if the UCS colour maps inside the sRGB cube.
