@@ -11,8 +11,6 @@ pub struct CurveParams {
     pub hue_ease: f64,
     /// Sinusoid peak position, normalised 0..1.
     pub chroma_peak: f64,
-    /// Chroma overshoot above the base anchor (1.0 = no overshoot).
-    pub chroma_boost: f64,
 }
 
 impl Default for CurveParams {
@@ -21,19 +19,6 @@ impl Default for CurveParams {
             lightness_ease: 1.7,
             hue_ease: 0.6,
             chroma_peak: 0.35,
-            chroma_boost: 1.2,
-        }
-    }
-}
-
-impl CurveParams {
-    /// Conservative, nearly-achromatic curve.
-    pub fn flat() -> Self {
-        Self {
-            lightness_ease: 1.0,
-            hue_ease: 1.0,
-            chroma_peak: 0.5,
-            chroma_boost: 1.0,
         }
     }
 }
@@ -51,7 +36,6 @@ pub fn create_neutral_light_scale(
 
     let c_base = (a6.ap * a6.ap + a6.bp * a6.bp).sqrt();
     let c_dark = (a12.ap * a12.ap + a12.bp * a12.bp).sqrt();
-    let c_peak = c_base * params.chroma_boost;
 
     let base_hue = a6.bp.atan2(a6.ap);
 
@@ -78,7 +62,7 @@ pub fn create_neutral_light_scale(
 
         // ----- M' (chroma) -----
         let env = sine_env(t, params.chroma_peak);
-        let mp = c_dark + (c_peak - c_dark) * env;
+        let mp = c_dark + (c_base - c_dark) * env;
 
         // ----- h (hue) -----
         let hue = if i < 6 {

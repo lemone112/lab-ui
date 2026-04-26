@@ -33,8 +33,6 @@ struct CurveConfig {
     hue_ease: f64,
     #[serde(default = "default_chroma_peak")]
     chroma_peak: f64,
-    #[serde(default = "default_chroma_boost")]
-    chroma_boost: f64,
 }
 
 impl Default for CurveConfig {
@@ -43,7 +41,6 @@ impl Default for CurveConfig {
             lightness_ease: default_lightness_ease(),
             hue_ease: default_hue_ease(),
             chroma_peak: default_chroma_peak(),
-            chroma_boost: default_chroma_boost(),
         }
     }
 }
@@ -51,7 +48,6 @@ impl Default for CurveConfig {
 fn default_lightness_ease() -> f64 { 1.7 }
 fn default_hue_ease() -> f64 { 0.6 }
 fn default_chroma_peak() -> f64 { 0.35 }
-fn default_chroma_boost() -> f64 { 1.2 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
 struct OutputConfig {
@@ -84,7 +80,6 @@ fn main() {
             lightness_ease: scale_cfg.curve.lightness_ease,
             hue_ease: scale_cfg.curve.hue_ease,
             chroma_peak: scale_cfg.curve.chroma_peak,
-            chroma_boost: scale_cfg.curve.chroma_boost,
         };
         let scale = match labui_core::neutral::create_neutral_light_scale(
             &scale_cfg.light,
