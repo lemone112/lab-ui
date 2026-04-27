@@ -1,49 +1,51 @@
 #[cfg(test)]
 mod tests;
 
+mod preview_server;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Config {
-    primitives: BTreeMap<String, ScaleConfig>,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Config {
+    pub primitives: BTreeMap<String, ScaleConfig>,
     #[serde(default)]
-    accents: BTreeMap<String, String>,
+    pub accents: BTreeMap<String, String>,
     #[serde(default)]
-    accent_theming: AccentThemingConfig,
+    pub accent_theming: AccentThemingConfig,
     #[serde(default)]
-    output: OutputConfig,
+    pub output: OutputConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct ScaleConfig {
-    light: String,
-    base: String,
-    dark: String,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ScaleConfig {
+    pub light: String,
+    pub base: String,
+    pub dark: String,
     #[serde(default)]
-    ic: Option<IcAnchors>,
+    pub ic: Option<IcAnchors>,
     #[serde(default)]
-    curve: CurveConfig,
+    pub curve: CurveConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct IcAnchors {
-    light: String,
-    base: String,
-    dark: String,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct IcAnchors {
+    pub light: String,
+    pub base: String,
+    pub dark: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct CurveConfig {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CurveConfig {
     #[serde(default = "default_lightness_ease")]
-    lightness_ease: f64,
+    pub lightness_ease: f64,
     #[serde(default = "default_hue_ease")]
-    hue_ease: f64,
+    pub hue_ease: f64,
     #[serde(default = "default_chroma_peak")]
-    chroma_peak: f64,
+    pub chroma_peak: f64,
 }
 
 impl Default for CurveConfig {
@@ -56,12 +58,12 @@ impl Default for CurveConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct AccentThemingConfig {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct AccentThemingConfig {
     #[serde(default = "default_dark_factor")]
-    dark_factor: f64,
+    pub dark_factor: f64,
     #[serde(default = "default_ic_boost")]
-    ic_boost: f64,
+    pub ic_boost: f64,
 }
 
 impl Default for AccentThemingConfig {
@@ -73,12 +75,12 @@ impl Default for AccentThemingConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
-struct OutputConfig {
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+pub struct OutputConfig {
     #[serde(default = "default_scss")]
-    scss: String,
+    pub scss: String,
     #[serde(default = "default_json")]
-    json: String,
+    pub json: String,
 }
 
 fn default_scss() -> String { "dist/tokens.scss".into() }
@@ -94,7 +96,7 @@ fn default_ic_boost() -> f64 { 15.0 }
 // ------------------------------------------------------------------
 
 #[derive(Debug)]
-enum GenerateError {
+pub enum GenerateError {
     NeutralScale { name: String, source: String },
     AccentResolve { name: String, source: String },
     JsonSerialize(serde_json::Error),
@@ -118,14 +120,14 @@ impl std::fmt::Display for GenerateError {
 
 impl std::error::Error for GenerateError {}
 
-struct SelectorBlock {
-    json_prefix: String,
-    neutral_vars: Vec<(String, String)>,
-    accent_vars: Vec<(String, String)>,
+pub struct SelectorBlock {
+    pub json_prefix: String,
+    pub neutral_vars: Vec<(String, String)>,
+    pub accent_vars: Vec<(String, String)>,
 }
 
 /// Resolve theme background anchors from the "neutral" primitive (or fallback).
-fn resolve_bg_anchors(config: &Config) -> (String, String, Option<String>, Option<String>) {
+pub fn resolve_bg_anchors(config: &Config) -> (String, String, Option<String>, Option<String>) {
     if let Some(neutral) = config.primitives.get("neutral") {
         (
             neutral.light.clone(),
@@ -144,7 +146,7 @@ fn resolve_bg_anchors(config: &Config) -> (String, String, Option<String>, Optio
 }
 
 /// Generate neutral scales and collect variables into per-selector blocks.
-fn collect_neutral_blocks(
+pub fn collect_neutral_blocks(
     config: &Config,
 ) -> Result<BTreeMap<String, SelectorBlock>, GenerateError> {
     let mut blocks: BTreeMap<String, SelectorBlock> = BTreeMap::new();
@@ -189,7 +191,7 @@ fn collect_neutral_blocks(
     Ok(blocks)
 }
 
-fn push_neutral_vars(
+pub fn push_neutral_vars(
     blocks: &mut BTreeMap<String, SelectorBlock>,
     selector: &str,
     json_prefix: &str,
@@ -208,7 +210,7 @@ fn push_neutral_vars(
 }
 
 /// Resolve accent colours per theme and push into the selector blocks.
-fn collect_accent_vars(
+pub fn collect_accent_vars(
     config: &Config,
     blocks: &mut BTreeMap<String, SelectorBlock>,
 ) -> Result<(), GenerateError> {
@@ -244,7 +246,7 @@ fn collect_accent_vars(
 }
 
 /// Emit SCSS and JSON from the collected blocks in logical selector order.
-fn emit_css_and_json(
+pub fn emit_css_and_json(
     blocks: BTreeMap<String, SelectorBlock>,
 ) -> Result<(String, String), GenerateError> {
     let mut scss = String::new();
@@ -276,7 +278,7 @@ fn emit_css_and_json(
     Ok((scss, json))
 }
 
-fn generate(config: &Config) -> Result<(String, String), GenerateError> {
+pub fn generate(config: &Config) -> Result<(String, String), GenerateError> {
     let mut blocks = collect_neutral_blocks(config)?;
     collect_accent_vars(config, &mut blocks)?;
     emit_css_and_json(blocks)
@@ -286,7 +288,7 @@ fn generate(config: &Config) -> Result<(String, String), GenerateError> {
 //  Main entrypoint
 // ------------------------------------------------------------------
 
-fn main() {
+fn read_config() -> Config {
     let config_path = Path::new("config.yaml");
     if !config_path.exists() {
         eprintln!("error: config.yaml not found");
@@ -295,6 +297,86 @@ fn main() {
 
     let yaml = fs::read_to_string(config_path).expect("failed to read config.yaml");
     let config: Config = serde_yaml::from_str(&yaml).expect("failed to parse config.yaml");
+    config
+}
+
+fn generate_and_output(config: &Config, format: Option<&str>) {
+    let (scss, json) = match generate(config) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("error: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    match format {
+        Some("css") => {
+            println!("{}", scss);
+        }
+        Some("json") => {
+            println!("{}", json);
+        }
+        _ => {
+            let scss_stdout = config.output.scss == "-";
+            let json_stdout = config.output.json == "-";
+
+            if scss_stdout && json_stdout {
+                println!("/* SCSS */\n{}\n/* JSON */\n{}", scss, json);
+            } else if scss_stdout {
+                println!("{}", scss);
+                fs::create_dir_all(Path::new(&config.output.json).parent().unwrap_or(Path::new(".")))
+                    .expect("failed to create output directory");
+                fs::write(&config.output.json, json).expect("failed to write json");
+            } else if json_stdout {
+                println!("{}", json);
+                fs::create_dir_all(Path::new(&config.output.scss).parent().unwrap_or(Path::new(".")))
+                    .expect("failed to create output directory");
+                fs::write(&config.output.scss, scss).expect("failed to write scss");
+            } else {
+                fs::create_dir_all(Path::new(&config.output.scss).parent().unwrap_or(Path::new(".")))
+                    .expect("failed to create output directory");
+                fs::create_dir_all(Path::new(&config.output.json).parent().unwrap_or(Path::new(".")))
+                    .expect("failed to create output directory");
+                fs::write(&config.output.scss, scss).expect("failed to write scss");
+                fs::write(&config.output.json, json).expect("failed to write json");
+                println!("Generated:");
+                println!("  {}", config.output.scss);
+                println!("  {}", config.output.json);
+            }
+        }
+    }
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() > 1 && args[1] == "preview" {
+        preview_server::run();
+        return;
+    }
+
+    let mut format = None;
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--format" => {
+                i += 1;
+                if i < args.len() {
+                    format = Some(args[i].as_str());
+                }
+            }
+            "--output" => {
+                i += 1;
+                if i < args.len() && args[i] == "-" {
+                    // handled in generate_and_output via config paths
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    let config = read_config();
 
     // Warn about incomplete IC anchors (outside generate() to keep tests quiet).
     for (name, scale_cfg) in &config.primitives {
@@ -305,21 +387,5 @@ fn main() {
         }
     }
 
-    let (scss, json) = match generate(&config) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("error: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    fs::create_dir_all(Path::new(&config.output.scss).parent().unwrap_or(Path::new(".")))
-        .expect("failed to create output directory");
-
-    fs::write(&config.output.scss, scss).expect("failed to write scss");
-    fs::write(&config.output.json, json).expect("failed to write json");
-
-    println!("Generated:");
-    println!("  {}", config.output.scss);
-    println!("  {}", config.output.json);
+    generate_and_output(&config, format);
 }

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab UI Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 8px; color: #fff; }
+  h2 { font-size: 1.1rem; margin: 24px 0 12px; color: #fff; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  h3 { font-size: 0.9rem; margin: 12px 0 8px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section { margin-bottom: 32px; }
+
+  /* Neutral */
+  .theme-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .theme-column { background: #222; border-radius: 8px; padding: 10px; }
+  .theme-label { font-size: 0.7rem; color: #888; margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
+  .swatch-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .swatch { width: 28px; height: 28px; border-radius: 4px; border: 1px solid #333; flex-shrink: 0; }
+  .swatch-label { font-family: monospace; font-size: 0.65rem; color: #aaa; }
+
+  /* Accents */
+  .accent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .accent-card { background: #222; border-radius: 8px; padding: 12px; }
+  .accent-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .accent-name { font-weight: 600; font-size: 0.85rem; color: #fff; }
+  .accent-canonical { font-family: monospace; font-size: 0.7rem; color: #888; margin-left: auto; }
+  .variant-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .variant-swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #333; flex-shrink: 0; }
+  .variant-info { font-size: 0.7rem; color: #aaa; }
+  .warning { color: #ff4444; font-weight: 700; background: #331111; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+
+  /* Mix */
+  .mix-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: #222; padding: 14px; border-radius: 8px; }
+  .mix-controls input[type="text"] { width: 90px; padding: 5px 8px; border: 1px solid #444; background: #111; color: #fff; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+  .mix-controls input[type="range"] { width: 200px; }
+  .mix-swatch { width: 48px; height: 48px; border-radius: 8px; border: 2px solid #444; flex-shrink: 0; }
+  .mix-label { font-size: 0.75rem; color: #888; min-width: 40px; }
+
+  /* Sliders */
+  .slider-row { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; background: #222; padding: 10px 14px; border-radius: 6px; }
+  .slider-row label { width: 200px; font-size: 0.8rem; color: #ccc; display: flex; justify-content: space-between; }
+  .slider-row input[type="range"] { flex: 1; max-width: 320px; }
+  .slider-value { font-family: monospace; color: #fff; min-width: 48px; text-align: right; }
+
+  @media (max-width: 900px) {
+    .theme-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .theme-grid { grid-template-columns: 1fr; }
+    .accent-grid { grid-template-columns: 1fr; }
+  }
+</style>
+<style id="live-style"></style>
+</head>
+<body>
+  <h1>Lab UI Preview</h1>
+
+  <div class="section" id="neutral-section">
+    <h2>Neutral Scales</h2>
+    <div id="neutral-container"></div>
+  </div>
+
+  <div class="section" id="accent-section">
+    <h2>Accents</h2>
+    <div class="accent-grid" id="accent-grid"></div>
+  </div>
+
+  <div class="section" id="mix-section">
+    <h2>Perceptual Mix</h2>
+    <div class="mix-controls">
+      <input type="text" id="mix-fg" value="#007AFF" placeholder="FG hex">
+      <input type="text" id="mix-bg" value="#FFFFFF" placeholder="BG hex">
+      <input type="range" id="mix-strength" min="0" max="1" step="0.01" value="0.5">
+      <span class="mix-label" id="mix-strength-val">0.50</span>
+      <div class="mix-swatch" id="mix-swatch"></div>
+    </div>
+  </div>
+
+  <div class="section" id="sliders-section">
+    <h2>Live Parameters</h2>
+    <div class="slider-row">
+      <label>Lightness Ease <span class="slider-value" id="val-lightness_ease">1.70</span></label>
+      <input type="range" id="lightness_ease" min="0.5" max="3.0" step="0.05" value="1.7">
+    </div>
+    <div class="slider-row">
+      <label>Hue Ease <span class="slider-value" id="val-hue_ease">0.60</span></label>
+      <input type="range" id="hue_ease" min="0.0" max="2.0" step="0.05" value="0.6">
+    </div>
+    <div class="slider-row">
+      <label>Chroma Peak <span class="slider-value" id="val-chroma_peak">0.35</span></label>
+      <input type="range" id="chroma_peak" min="0.0" max="1.0" step="0.01" value="0.35">
+    </div>
+    <div class="slider-row">
+      <label>Dark Factor <span class="slider-value" id="val-dark_factor">0.70</span></label>
+      <input type="range" id="dark_factor" min="0.3" max="1.0" step="0.05" value="0.7">
+    </div>
+    <div class="slider-row">
+      <label>IC Boost <span class="slider-value" id="val-ic_boost">15.0</span></label>
+      <input type="range" id="ic_boost" min="0" max="30" step="0.5" value="15">
+    </div>
+  </div>
+
+<script>
+const THEME_PREFIXES = {
+  light: 'root-',
+  dark: 'dark-',
+  'light-ic': 'ic-',
+  'dark-ic': 'dark-ic-'
+};
+
+let currentConfig = null;
+let debounceTimer = null;
+
+async function init() {
+  const [config, tokens, css, accentMatrix] = await Promise.all([
+    fetch('/api/config').then(r => r.json()),
+    fetch('/api/tokens').then(r => r.json()),
+    fetch('/api/css').then(r => r.text()),
+    fetch('/api/accent-matrix').then(r => r.json())
+  ]);
+  currentConfig = config;
+  document.getElementById('live-style').textContent = css;
+  renderSliders(config);
+  renderNeutral(config, tokens);
+  renderAccents(accentMatrix);
+  updateMix();
+}
+
+function renderSliders(config) {
+  const primitives = Object.values(config.primitives);
+  const curve = primitives.length > 0 ? primitives[0].curve : { lightness_ease: 1.7, hue_ease: 0.6, chroma_peak: 0.35 };
+  const theming = config.accent_theming;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = val;
+      const display = Number(val);
+      document.getElementById('val-' + id).textContent =
+        id === 'chroma_peak' ? display.toFixed(2) :
+        id === 'ic_boost' ? display.toFixed(1) :
+        display.toFixed(2);
+    }
+  };
+
+  setVal('lightness_ease', curve.lightness_ease);
+  setVal('hue_ease', curve.hue_ease);
+  setVal('chroma_peak', curve.chroma_peak);
+  setVal('dark_factor', theming.dark_factor);
+  setVal('ic_boost', theming.ic_boost);
+
+  ['lightness_ease','hue_ease','chroma_peak','dark_factor','ic_boost'].forEach(id => {
+    document.getElementById(id).addEventListener('input', onSliderChange);
+  });
+}
+
+function onSliderChange(e) {
+  const id = e.target.id;
+  const val = parseFloat(e.target.value);
+  const display = Number(val);
+  document.getElementById('val-' + id).textContent =
+    id === 'chroma_peak' ? display.toFixed(2) :
+    id === 'ic_boost' ? display.toFixed(1) :
+    display.toFixed(2);
+
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(async () => {
+    const payload = {
+      curve: {
+        lightness_ease: parseFloat(document.getElementById('lightness_ease').value),
+        hue_ease: parseFloat(document.getElementById('hue_ease').value),
+        chroma_peak: parseFloat(document.getElementById('chroma_peak').value)
+      },
+      accent_theming: {
+        dark_factor: parseFloat(document.getElementById('dark_factor').value),
+        ic_boost: parseFloat(document.getElementById('ic_boost').value)
+      }
+    };
+
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const [newCss, newTokens, newAccentMatrix] = await Promise.all([
+      fetch('/api/css').then(r => r.text()),
+      fetch('/api/tokens').then(r => r.json()),
+      fetch('/api/accent-matrix').then(r => r.json())
+    ]);
+
+    document.getElementById('live-style').textContent = newCss;
+    renderNeutral(currentConfig, newTokens);
+    renderAccents(newAccentMatrix);
+  }, 100);
+}
+
+function renderNeutral(config, tokens) {
+  const container = document.getElementById('neutral-container');
+  container.innerHTML = '';
+
+  Object.keys(config.primitives).forEach(primitive => {
+    const section = document.createElement('div');
+    section.className = 'primitive';
+
+    const title = document.createElement('h3');
+    title.textContent = primitive;
+    section.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'theme-grid';
+
+    ['light', 'dark', 'light-ic', 'dark-ic'].forEach(theme => {
+      const prefix = THEME_PREFIXES[theme];
+      const col = document.createElement('div');
+      col.className = 'theme-column';
+
+      const label = document.createElement('div');
+      label.className = 'theme-label';
+      label.textContent = theme;
+      col.appendChild(label);
+
+      for (let i = 0; i <= 12; i++) {
+        const key = prefix + '---' + primitive + '-' + i;
+        const hex = tokens[key] || '#000000';
+        const row = document.createElement('div');
+        row.className = 'swatch-row';
+        row.innerHTML = '<div class="swatch" style="background:' + hex + '"></div><span class="swatch-label">' + hex + '</span>';
+        col.appendChild(row);
+      }
+
+      grid.appendChild(col);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+function renderAccents(matrix) {
+  const grid = document.getElementById('accent-grid');
+  grid.innerHTML = '';
+
+  matrix.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'accent-card';
+
+    const header = document.createElement('div');
+    header.className = 'accent-header';
+    header.innerHTML = '<div class="swatch" style="background:' + item.canonical + ';width:20px;height:20px;border-radius:4px;"></div><span class="accent-name">' + item.name + '</span><span class="accent-canonical">' + item.canonical + '</span>';
+    card.appendChild(header);
+
+    item.variants.forEach(v => {
+      const row = document.createElement('div');
+      row.className = 'variant-row';
+      const absLc = Math.abs(v.lc);
+      const warning = absLc < 75 ? '<span class="warning">Lc ' + v.lc.toFixed(1) + '</span>' : 'Lc ' + v.lc.toFixed(1);
+      row.innerHTML = '<div class="variant-swatch" style="background:' + v.hex + '"></div><span class="variant-info">' + v.theme + ' &mdash; ' + warning + ' <span style="color:#666">(bg ' + v.bg + ')</span></span>';
+      card.appendChild(row);
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+async function updateMix() {
+  const fg = document.getElementById('mix-fg').value;
+  const bg = document.getElementById('mix-bg').value;
+  const strength = document.getElementById('mix-strength').value;
+  document.getElementById('mix-strength-val').textContent = parseFloat(strength).toFixed(2);
+
+  try {
+    const res = await fetch('/api/perceptual-mix?fg=' + encodeURIComponent(fg) + '&bg=' + encodeURIComponent(bg) + '&strength=' + strength);
+    const data = await res.json();
+    if (data.hex) {
+      document.getElementById('mix-swatch').style.background = data.hex;
+    }
+  } catch (e) {
+    console.error('Mix error:', e);
+  }
+}
+
+document.getElementById('mix-fg').addEventListener('input', updateMix);
+document.getElementById('mix-bg').addEventListener('input', updateMix);
+document.getElementById('mix-strength').addEventListener('input', updateMix);
+
+init();
+</script>
+</body>
+</html>
